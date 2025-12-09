@@ -10,6 +10,7 @@ using System.Text;
 using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace EchWorkersManager
 {
@@ -25,9 +26,9 @@ namespace EchWorkersManager
         private int httpProxyPort = 10809;
         private NotifyIcon trayIcon;
         private string echWorkersPath;
-        private HashSet<string> gfwList = new HashSet<string>();
-        private HashSet<string> chinaIPList = new HashSet<string>();
-        private string routingMode = "GFWList"; // 全局代理, GFWList
+        // 修改为 List 以便进行前缀匹配，而不是完全相等匹配
+        private List<string> chinaIPPrefixes = new List<string>();
+        private string routingMode = "绕过大陆"; // 默认模式
 
         [DllImport("wininet.dll")]
         private static extern bool InternetSetOption(IntPtr hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);
@@ -45,56 +46,118 @@ namespace EchWorkersManager
 
         private void InitializeRoutingData()
         {
-            // 加载 GFWList (简化版,实际应用中应该加载完整列表)
-            string[] commonBlockedDomains = {
-                "google.com", "youtube.com", "facebook.com", "twitter.com", "instagram.com",
-                "gmail.com", "blogspot.com", "wordpress.com", "wikipedia.org", "tumblr.com",
-                "github.com", "telegram.org", "whatsapp.com", "medium.com", "reddit.com",
-                "pinterest.com", "twimg.com", "t.co", "bit.ly", "goo.gl"
-            };
-            
-            foreach (string domain in commonBlockedDomains)
-            {
-                gfwList.Add(domain);
-            }
-
-            // 中国大陆 IP 段 (简化版,实际应用中应该加载完整 CIDR 列表)
+            // 初始化中国 IP 段前缀 (简化版)
+            // 逻辑：如果目标 IP 以这些字符串开头，则认为是中国 IP
+            // 注意：为了更精准，建议后续去网上找完整的 CN IP CIDR 列表并解析
             string[] chinaCIDR = {
-                "1.0.1.0", "1.0.2.0", "1.0.8.0", "1.0.32.0", 
-                "14.0.0.0", "27.0.0.0", "36.0.0.0", "42.0.0.0",
-                "58.0.0.0", "59.0.0.0", "60.0.0.0", "61.0.0.0",
-                "110.0.0.0", "111.0.0.0", "112.0.0.0", "113.0.0.0",
-                "114.0.0.0", "115.0.0.0", "116.0.0.0", "117.0.0.0",
-                "118.0.0.0", "119.0.0.0", "120.0.0.0", "121.0.0.0",
-                "122.0.0.0", "123.0.0.0", "124.0.0.0", "125.0.0.0"
+                "1.0.", "14.", "27.", "36.", "42.",
+                "58.", "59.", "60.", "61.",
+                "110.", "111.", "112.", "113.",
+                "114.", "115.", "116.", "117.",
+                "118.", "119.", "120.", "121.",
+                "122.", "123.", "124.", "125.",
+                "180.", "182.", "183.", "202.", "203.",
+                "210.", "211.", "218.", "219.", "220.", "221.", "222.", "223."
             };
             
-            foreach (string ip in chinaCIDR)
-            {
-                chinaIPList.Add(ip);
-            }
+            chinaIPPrefixes.Clear();
+            chinaIPPrefixes.AddRange(chinaCIDR);
         }
 
+        // 判断是否为私有/局域网 IP
+        private bool IsPrivateIP(IPAddress ip)
+        {
+            if (IPAddress.IsLoopback(ip)) return true; // 127.0.0.1, ::1
+
+            byte[] bytes = ip.GetAddressBytes();
+            if (ip.AddressFamily == AddressFamily.InterNetwork)
+            {
+                // 10.0.0.0/8
+                if (bytes[0] == 10) return true;
+                // 172.16.0.0/12
+                if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
+                // 192.168.0.0/16
+                if (bytes[0] == 192 && bytes[1] == 168) return true;
+                // 169.254.0.0/16 (Link-local)
+                if (bytes[0] == 169 && bytes[1] == 254) return true;
+            }
+            return false;
+        }
+
+        // 判断是否为中国 IP
+        private bool IsChinaIP(IPAddress ip)
+        {
+            string ipStr = ip.ToString();
+            // 简单的前缀匹配
+            foreach (var prefix in chinaIPPrefixes)
+            {
+                if (ipStr.StartsWith(prefix))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 核心路由逻辑修改
         private bool ShouldProxy(string host)
         {
-            if (routingMode == "全局代理")
+            // 1. 直连模式：永远不走代理
+            if (routingMode == "直连模式")
+            {
+                return false;
+            }
+
+            IPAddress targetIP = null;
+            bool isIpAddr = IPAddress.TryParse(host, out targetIP);
+
+            // 如果是域名且模式是"绕过大陆"，我们需要解析出 IP 才能判断它是不是中国 IP
+            // 注意：DNS 解析可能会耗时，但这是基于 IP 规则分流的必要步骤
+            if (!isIpAddr && routingMode == "绕过大陆")
+            {
+                try
+                {
+                    IPAddress[] ips = Dns.GetHostAddresses(host);
+                    if (ips.Length > 0)
+                    {
+                        targetIP = ips[0];
+                    }
+                }
+                catch
+                {
+                    // 解析失败，为了保险起见，如果是绕过大陆模式，通常解析失败的都是被污染的国外域名
+                    // 所以默认返回 true (走代理)
+                    return true;
+                }
+            }
+
+            // 2. 内网 IP 检查：无论全局还是绕过大陆，内网 IP 都不走代理
+            if (targetIP != null && IsPrivateIP(targetIP))
+            {
+                return false;
+            }
+
+            // 3. 全局模式：排除内网后，全部走代理
+            if (routingMode == "全局模式")
             {
                 return true;
             }
-            else if (routingMode == "GFWList")
+
+            // 4. 绕过大陆模式
+            if (routingMode == "绕过大陆")
             {
-                // 检查是否在 GFWList 中
-                foreach (string domain in gfwList)
+                // 如果我们获取到了 IP，并且它是中国 IP -> 直连(false)
+                if (targetIP != null && IsChinaIP(targetIP))
                 {
-                    if (host.EndsWith(domain) || host == domain)
-                    {
-                        return true;
-                    }
+                    return false;
                 }
-                return false;
+                
+                // 其他情况（国外 IP、无法解析的域名等）-> 代理(true)
+                // 这样能确保 Youtube 等视频网站（非中国IP）一定走代理
+                return true;
             }
-            
-            return true;
+
+            return true; // 默认
         }
 
         private void InitializeTrayIcon()
@@ -312,8 +375,9 @@ namespace EchWorkersManager
             cmbRouting.Location = new System.Drawing.Point(130, 200);
             cmbRouting.Size = new System.Drawing.Size(340, 20);
             cmbRouting.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbRouting.Items.AddRange(new string[] { "全局代理", "GFWList" });
-            cmbRouting.SelectedIndex = 1;
+            // 更新选项为新的三种模式
+            cmbRouting.Items.AddRange(new string[] { "全局模式", "绕过大陆", "直连模式" });
+            cmbRouting.SelectedIndex = 1; // 默认绕过大陆
             cmbRouting.SelectedIndexChanged += (s, e) => {
                 routingMode = cmbRouting.SelectedItem.ToString();
             };
@@ -342,7 +406,7 @@ namespace EchWorkersManager
 
             Label lblStatus = new Label();
             lblStatus.Name = "lblStatus";
-            lblStatus.Text = "状态: 未运行\nHTTP代理: 未启动\n系统代理: 未启用\n路由模式: 全局代理";
+            lblStatus.Text = "状态: 未运行\nHTTP代理: 未启动\n系统代理: 未启用\n路由模式: 绕过大陆";
             lblStatus.Location = new System.Drawing.Point(20, 310);
             lblStatus.Size = new System.Drawing.Size(450, 100);
             lblStatus.ForeColor = System.Drawing.Color.Blue;
@@ -357,9 +421,9 @@ namespace EchWorkersManager
             this.Controls.Add(btnSave);
 
             Label lblInfo = new Label();
-            lblInfo.Text = "💡 全局代理=所有流量 | GFWList=被墙网站走代理";
-            lblInfo.Location = new System.Drawing.Point(20, 420);
-            lblInfo.Size = new System.Drawing.Size(450, 40);
+            lblInfo.Text = "💡 全局模式：代理所有(除内网)\n💡 绕过大陆：仅代理境外IP(除内网)\n💡 直连模式：不使用代理";
+            lblInfo.Location = new System.Drawing.Point(20, 410);
+            lblInfo.Size = new System.Drawing.Size(450, 60);
             lblInfo.ForeColor = System.Drawing.Color.Green;
             lblInfo.Font = new System.Drawing.Font("Microsoft YaHei", 8.5F);
             this.Controls.Add(lblInfo);
@@ -408,7 +472,12 @@ namespace EchWorkersManager
                 Thread.Sleep(1000);
 
                 StartHttpProxy();
-                EnableSystemProxy();
+                
+                // 如果是直连模式，不设置系统代理
+                if (routingMode != "直连模式")
+                {
+                    EnableSystemProxy();
+                }
 
                 isRunning = true;
                 ((Button)this.Controls["btnStart"]).Enabled = false;
@@ -420,7 +489,8 @@ namespace EchWorkersManager
                     ((ToolStripMenuItem)trayIcon.ContextMenuStrip.Items["stopItem"]).Enabled = true;
                 }
                 
-                UpdateStatusLabel($"✅ 状态: 运行中\n✅ HTTP代理: 127.0.0.1:{httpProxyPort}\n✅ 系统代理: 已启用\n✅ 路由模式: {routingMode}");
+                string proxyStatus = routingMode == "直连模式" ? "未启用(直连)" : "已启用";
+                UpdateStatusLabel($"✅ 状态: 运行中\n✅ HTTP代理: 127.0.0.1:{httpProxyPort}\n✅ 系统代理: {proxyStatus}\n✅ 路由模式: {routingMode}");
                 trayIcon.Text = $"ECH Workers Manager - 运行中 ({routingMode})";
             }
             catch (Exception ex)
@@ -687,6 +757,7 @@ namespace EchWorkersManager
 
                 registry.SetValue("ProxyEnable", 1);
                 registry.SetValue("ProxyServer", proxyServer);
+                // 确保对本地地址绕过系统代理设置
                 registry.SetValue("ProxyOverride", "localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*;<local>");
                 registry.Close();
 
