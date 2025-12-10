@@ -1,6 +1,6 @@
 EchWorkersManager/
-├── Program.cs (已有)
-├── EchWorkersManager.csproj (已有)
+├── Program.cs
+├── EchWorkersManager.csproj
 ├── Forms/
 │   └── MainForm.cs
 ├── Services/
